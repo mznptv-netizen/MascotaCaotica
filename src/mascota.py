@@ -13,21 +13,21 @@ def obtener_ruta_recurso(ruta_relativa):
         return os.path.join(sys._MEIPASS, ruta_relativa)
     return os.path.join(os.path.abspath("."), ruta_relativa)
 
-# --- CONFIGURACIÓN ---
-ANCHO_MASCOTA = 100
-ALTO_MASCOTA = 100
-VELOCIDAD = 4
-INTERVALO_ROBO_SEGUNDOS = 10 # El mouse se roba exactamente cada 10 segundos
+# --- CONFIGURACIÓN DE LA SUPERMASCOTA AGRESIVA ---
+ANCHO_MASCOTA = 250  # ¡Mucho más grande!
+ALTO_MASCOTA = 250
+VELOCIDAD = 7         # Más rápida
+INTERVALO_ROBO_SEGUNDOS = 10
 
 CARPETA_RANDOM = obtener_ruta_recurso("imagenes_random")
-IMAGEN_MASCOTA = obtener_ruta_recurso("mascota.png") # Puede ser .png o .gif (la mascota principal)
-IMAGEN_ROBO = obtener_ruta_recurso("imagen_robo.png") # Imagen o GIF específico al robar el mouse
+IMAGEN_MASCOTA = obtener_ruta_recurso("mascota.png")
+IMAGEN_ROBO = obtener_ruta_recurso("imagen_robo.png")
 
 class MascotaCaotica:
     def __init__(self):
         self.window = tk.Tk()
 
-        # Configurar ventana transparente y siempre encima
+        # Configurar ventana transparente y siempre arriba de todo
         self.window.overrideredirect(True)
         self.window.wm_attributes("-topmost", True)
         self.window.config(bg='magenta')
@@ -38,7 +38,7 @@ class MascotaCaotica:
             self.window.destroy()
             return
 
-        # Configurar etiqueta principal (Soporta GIFs animados)
+        # Configurar etiqueta principal
         self.label = tk.Label(self.window, bg='magenta')
         self.label.pack()
         
@@ -51,10 +51,10 @@ class MascotaCaotica:
         self.x, self.y = 500, 500
         self.window.geometry(f"+{self.x}+{self.y}")
 
-        # Cargar imágenes de la carpeta aleatoria (opcional)
+        # Cargar imágenes de la carpeta aleatoria
         self.lista_random = self._cargar_imagenes_random()
 
-        # Temporizador para el robo del mouse cada 10 segundos
+        # Temporizador para el robo del mouse
         self.ultimo_robo = time.time()
 
         # Iniciar animaciones y bucle
@@ -63,7 +63,6 @@ class MascotaCaotica:
         self.window.mainloop()
 
     def cargar_animacion_principal(self, ruta):
-        """Carga frames si es GIF o imagen estática para la mascota."""
         try:
             im = Image.open(ruta)
             self.delay_mascota = im.info.get('duration', 100)
@@ -81,7 +80,6 @@ class MascotaCaotica:
             self.frames_mascota.append(ImageTk.PhotoImage(im))
 
     def animar_mascota(self):
-        """Bucle para reproducir la animación GIF de la mascota."""
         if self.frames_mascota:
             self.frame_actual_idx = (self.frame_actual_idx + 1) % len(self.frames_mascota)
             self.label.configure(image=self.frames_mascota[self.frame_actual_idx])
@@ -93,8 +91,17 @@ class MascotaCaotica:
         archivos = os.listdir(CARPETA_RANDOM)
         return [os.path.join(CARPETA_RANDOM, f) for f in archivos if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
 
+    def mover_mouse_agresivo(self):
+        """Mueve el cursor frenéticamente por toda la pantalla"""
+        sw, sh = self.window.winfo_screenwidth(), self.window.winfo_screenheight()
+        # Sacude el mouse en 10 puntos aleatorios muy rápido
+        for _ in range(12):
+            rx = random.randint(50, sw - 50)
+            ry = random.randint(50, sh - 50)
+            pyautogui.moveTo(rx, ry, duration=0.04)
+
     def actualizar(self):
-        # 1. Movimiento constante de persecución hacia el mouse
+        # 1. Movimiento constante de persecución agresiva hacia el mouse
         mx, my = pyautogui.position()
         target_x = mx - (ANCHO_MASCOTA // 2)
         target_y = my - (ALTO_MASCOTA // 2)
@@ -107,26 +114,40 @@ class MascotaCaotica:
 
         self.window.geometry(f"+{self.x}+{self.y}")
 
-        # 2. Comprobar si ya pasaron los 10 segundos para el evento de robo
+        # 2. Comprobar si pasaron los 10 segundos para el ATAQUE AGRESIVO
         tiempo_actual = time.time()
         if tiempo_actual - self.ultimo_robo >= INTERVALO_ROBO_SEGUNDOS:
-            self.ultimo_robo = tiempo_actual # Reiniciar cronómetro
+            self.ultimo_robo = tiempo_actual
 
-            # ACCIÓN DE ROBO CADA 10 SEGUNDOS:
-            pyautogui.moveTo(mx + random.randint(-250, 250), my + random.randint(-250, 250), duration=0.1)
+            # ATAQUE 1: Mover el mouse descontroladamente por toda la pantalla
+            self.mover_mouse_agresivo()
 
-            # Mostrar la imagen o GIF específico del robo
+            # ATAQUE 2: Abrir la imagen de robo con el "Efecto Hidra" (Cierras 1, se abren 2)
             if os.path.exists(IMAGEN_ROBO):
-                self.mostrar_ventana_multimedia(IMAGEN_ROBO, "¡Te robé el mouse!")
+                self.mostrar_ventana_multimedia(IMAGEN_ROBO, "¡TE ROBÉ EL MOUSE!", es_imagen_robo=True)
 
-        # Repetir bucle constantemente
-        self.window.after(30, self.actualizar)
+            # ATAQUE 3: Abrir meme aleatorio de la carpeta
+            if self.lista_random:
+                img_path = random.choice(self.lista_random)
+                self.mostrar_ventana_multimedia(img_path, "Meme Random Caótico", es_imagen_robo=False)
 
-    def mostrar_ventana_multimedia(self, ruta_img, titulo=""):
-        """Crea una ventana emergente que soporta imágenes estáticas o GIFs."""
+        self.window.after(20, self.actualizar)
+
+    def mostrar_ventana_multimedia(self, ruta_img, titulo="", es_imagen_robo=False):
+        """Crea ventanas emergentes y aplica el efecto de multiplicar por 2 al cerrar si es la imagen de robo."""
         v = Toplevel(self.window)
         v.title(titulo)
         v.wm_attributes("-topmost", True)
+
+        # Lógica del Efecto Hidra: Si se cierra la imagen de robo, abre 2 nuevas
+        if es_imagen_robo:
+            def al_cerrar():
+                v.destroy()
+                # Se abren 2 ventanas más de robo
+                self.mostrar_ventana_multimedia(IMAGEN_ROBO, "¡NO PUEDES CERRARME!", es_imagen_robo=True)
+                self.mostrar_ventana_multimedia(IMAGEN_ROBO, "¡AHORA SOMOS DOS!", es_imagen_robo=True)
+
+            v.protocol("WM_DELETE_WINDOW", al_cerrar)
 
         lbl_emergente = tk.Label(v)
         lbl_emergente.pack()
